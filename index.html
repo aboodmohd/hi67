@@ -1,76 +1,360 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Embed Extractor</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Fira+Code&display=swap" rel="stylesheet">
+    
+    <!-- Plyr & Hls.js -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
     <style>
-        body { font-family: 'Consolas', monospace; padding: 20px; background: #0d0d0d; color: #00ff00; display: flex; gap: 20px; }
-        .left-panel { flex: 1; display: flex; flex-direction: column; }
-        .right-panel { flex: 1; display: flex; flex-direction: column; align-items: center; }
-        h2 { color: #fff; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 10px; background: #1a1a1a; border: 1px solid #333; color: #00ff00; font-family: 'Consolas', monospace; }
-        button { padding: 10px 20px; background: #00ff00; color: #000; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #00cc00; }
-        #console { margin-top: 20px; white-space: pre-wrap; background: #111; padding: 15px; border: 1px solid #333; height: 400px; overflow-y: auto; }
-        .stream-link { color: #00bfff; word-break: break-all; cursor: pointer; text-decoration: underline; }
-        .stream-link:hover { color: #00ffff; }
-        #videoPlayer { width: 100%; max-width: 800px; background: #000; border: 1px solid #333; margin-top: 20px; }
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --success-hover: #059669;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+            height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--text);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            flex: 1;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button.primary-btn {
+            padding: 14px 28px;
+            border-radius: 8px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button.primary-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        #console {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1rem;
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .console-entry {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .stream-entry {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin: 12px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stream-url {
+            color: var(--success);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            font-weight: 600;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .copy-btn {
+            background: var(--border);
+            color: white;
+        }
+
+        .copy-btn:hover {
+            background: #475569;
+        }
+
+        .play-btn {
+            background: var(--success);
+            color: white;
+        }
+
+        .play-btn:hover {
+            background: var(--success-hover);
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 1000px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        
+        /* Custom scrollbar for console */
+        #console::-webkit-scrollbar { width: 8px; }
+        #console::-webkit-scrollbar-track { background: var(--bg); }
+        #console::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        #console::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
 <body>
-    <div class="left-panel">
-        <h2>[+] Video Stream Extractor</h2>
+
+    <div class="container">
+        <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><polygon points="10 13 10 19 15 16 10 13"/></svg>
+            Video Stream Extractor
+        </h2>
         <div class="input-group">
             <input type="text" id="targetUrl" placeholder="Inject target embed URL here...">
-            <button id="fireBtn">EXECUTE</button>
+            <button id="fireBtn" class="primary-btn">EXECUTE</button>
         </div>
-        <div id="console">Waiting for target...</div>
+        <div id="console">
+            <div class="console-entry">[*] Waiting for target...</div>
+        </div>
     </div>
-    <div class="right-panel">
-        <h2>[>] Player</h2>
-        <video id="videoPlayer" controls></video>
+
+    <!-- Video Player Modal -->
+    <div id="videoModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="close-btn" id="closeModal">&times;</button>
+            <video id="player" playsinline controls></video>
+        </div>
     </div>
 
     <script>
         const { ipcRenderer } = require('electron');
         const consoleDiv = document.getElementById('console');
-        const videoPlayer = document.getElementById('videoPlayer');
-        let hls;
+        const videoModal = document.getElementById('videoModal');
+        const videoElement = document.getElementById('player');
+        
+        let playerInstance;
+        let hlsInstance;
 
-        function playStream(url) {
-            if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('hls'))) {
-                if (hls) {
-                    hls.destroy();
-                }
-                hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(videoPlayer);
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    videoPlayer.play();
+        // Initialize Plyr
+        function initPlayer() {
+            if (!playerInstance) {
+                playerInstance = new Plyr(videoElement, {
+                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
+                    settings: ['quality', 'speed', 'loop']
                 });
-            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl') && (url.includes('.m3u8') || url.includes('hls'))) {
-                // For Safari
-                videoPlayer.src = url;
-                videoPlayer.addEventListener('loadedmetadata', function() {
-                    videoPlayer.play();
-                });
-            } else {
-                // Fallback for mp4 or other native supported formats
-                videoPlayer.src = url;
-                videoPlayer.play();
             }
         }
 
+        function playStream(url) {
+            videoModal.classList.remove('hidden');
+            initPlayer();
+
+            if (hlsInstance) {
+                hlsInstance.destroy();
+            }
+
+            if (url.includes('.m3u8') || url.includes('hls')) {
+                if (Hls.isSupported()) {
+                    hlsInstance = new Hls();
+                    hlsInstance.loadSource(url);
+                    hlsInstance.attachMedia(videoElement);
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
+                        videoElement.play();
+                    });
+                } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                    videoElement.src = url;
+                    videoElement.addEventListener('loadedmetadata', function () {
+                        videoElement.play();
+                    });
+                }
+            } else {
+                videoElement.src = url;
+                videoElement.play();
+            }
+        }
+
+        function closePlayer() {
+            videoModal.classList.add('hidden');
+            if (playerInstance) playerInstance.stop();
+            if (hlsInstance) hlsInstance.destroy();
+            videoElement.src = '';
+        }
+
+        document.getElementById('closeModal').addEventListener('click', closePlayer);
+
         function log(msg, isLink = false) {
             const entry = document.createElement('div');
+            
             if (isLink) {
-                entry.className = 'stream-link';
-                entry.innerText = `[STREAM FOUND] -> ${msg}`;
-                entry.onclick = () => playStream(msg);
+                entry.className = 'stream-entry';
+                
+                const textSpan = document.createElement('span');
+                textSpan.className = 'stream-url';
+                textSpan.innerText = msg;
+                textSpan.title = msg; // Tooltip for full URL
+                
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'btn-group';
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.innerText = 'Copy';
+                copyBtn.className = 'action-btn copy-btn';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(msg);
+                    copyBtn.innerText = 'Copied!';
+                    copyBtn.style.background = 'var(--success)';
+                    setTimeout(() => {
+                        copyBtn.innerText = 'Copy';
+                        copyBtn.style.background = 'var(--border)';
+                    }, 2000);
+                };
+                
+                const playBtn = document.createElement('button');
+                playBtn.innerText = 'Play';
+                playBtn.className = 'action-btn play-btn';
+                playBtn.onclick = () => playStream(msg);
+                
+                btnGroup.appendChild(copyBtn);
+                btnGroup.appendChild(playBtn);
+                
+                entry.appendChild(textSpan);
+                entry.appendChild(btnGroup);
             } else {
+                entry.className = 'console-entry';
                 entry.innerText = `[*] ${msg}`;
             }
+            
             consoleDiv.appendChild(entry);
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
