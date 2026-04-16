@@ -2,34 +2,72 @@
 <html>
 <head>
     <title>Embed Extractor</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        body { font-family: 'Consolas', monospace; padding: 20px; background: #0d0d0d; color: #00ff00; }
+        body { font-family: 'Consolas', monospace; padding: 20px; background: #0d0d0d; color: #00ff00; display: flex; gap: 20px; }
+        .left-panel { flex: 1; display: flex; flex-direction: column; }
+        .right-panel { flex: 1; display: flex; flex-direction: column; align-items: center; }
         h2 { color: #fff; }
         .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 10px; background: #1a1a1a; border: 1px solid #333; color: #00ff00; font-family: 'Consolas', monospace; }
         button { padding: 10px 20px; background: #00ff00; color: #000; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background: #00cc00; }
         #console { margin-top: 20px; white-space: pre-wrap; background: #111; padding: 15px; border: 1px solid #333; height: 400px; overflow-y: auto; }
-        .stream-link { color: #00bfff; word-break: break-all; }
+        .stream-link { color: #00bfff; word-break: break-all; cursor: pointer; text-decoration: underline; }
+        .stream-link:hover { color: #00ffff; }
+        #videoPlayer { width: 100%; max-width: 800px; background: #000; border: 1px solid #333; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h2>[+] Video Stream Extractor</h2>
-    <div class="input-group">
-        <input type="text" id="targetUrl" placeholder="Inject target embed URL here...">
-        <button id="fireBtn">EXECUTE</button>
+    <div class="left-panel">
+        <h2>[+] Video Stream Extractor</h2>
+        <div class="input-group">
+            <input type="text" id="targetUrl" placeholder="Inject target embed URL here...">
+            <button id="fireBtn">EXECUTE</button>
+        </div>
+        <div id="console">Waiting for target...</div>
     </div>
-    <div id="console">Waiting for target...</div>
+    <div class="right-panel">
+        <h2>[>] Player</h2>
+        <video id="videoPlayer" controls></video>
+    </div>
 
     <script>
         const { ipcRenderer } = require('electron');
         const consoleDiv = document.getElementById('console');
+        const videoPlayer = document.getElementById('videoPlayer');
+        let hls;
+
+        function playStream(url) {
+            if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('hls'))) {
+                if (hls) {
+                    hls.destroy();
+                }
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(videoPlayer);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    videoPlayer.play();
+                });
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl') && (url.includes('.m3u8') || url.includes('hls'))) {
+                // For Safari
+                videoPlayer.src = url;
+                videoPlayer.addEventListener('loadedmetadata', function() {
+                    videoPlayer.play();
+                });
+            } else {
+                // Fallback for mp4 or other native supported formats
+                videoPlayer.src = url;
+                videoPlayer.play();
+            }
+        }
 
         function log(msg, isLink = false) {
             const entry = document.createElement('div');
             if (isLink) {
                 entry.className = 'stream-link';
                 entry.innerText = `[STREAM FOUND] -> ${msg}`;
+                entry.onclick = () => playStream(msg);
             } else {
                 entry.innerText = `[*] ${msg}`;
             }
