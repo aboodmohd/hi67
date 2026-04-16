@@ -93,11 +93,13 @@ ipcMain.on('launch-extractor', (event, targetUrl) => {
     extractionWindow.webContents.on('did-start-navigation', () => {
         if (extractionWindow && !extractionWindow.isDestroyed()) {
             extractionWindow.webContents.executeJavaScript(`
-                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] }); // Fake plugins array length
-                window.chrome = { runtime: {} }; // Fake chrome object
-            `);
+                try {
+                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] }); // Fake plugins array length
+                    window.chrome = { runtime: {} }; // Fake chrome object
+                } catch (e) {}
+            `).catch(() => { /* Ignore execution errors on rapid navigation */ });
         }
     });
 
@@ -110,25 +112,27 @@ ipcMain.on('launch-extractor', (event, targetUrl) => {
         if (extractionWindow && !extractionWindow.isDestroyed()) {
             extractionWindow.webContents.executeJavaScript(`
                 setTimeout(() => {
-                    const videos = document.querySelectorAll('video');
-                    const iframes = document.querySelectorAll('iframe');
-                    
-                    videos.forEach(v => {
-                        v.muted = true;
-                        v.play().catch(e => console.log('Autoplay blocked:', e));
-                    });
-                    
-                    // Click the center of the screen to bypass click-to-play overlays
-                    const clickEvent = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true,
-                        clientX: window.innerWidth / 2,
-                        clientY: window.innerHeight / 2
-                    });
-                    document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)?.dispatchEvent(clickEvent);
+                    try {
+                        const videos = document.querySelectorAll('video');
+                        const iframes = document.querySelectorAll('iframe');
+                        
+                        videos.forEach(v => {
+                            v.muted = true;
+                            v.play().catch(e => console.log('Autoplay blocked:', e));
+                        });
+                        
+                        // Click the center of the screen to bypass click-to-play overlays
+                        const clickEvent = new MouseEvent('click', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: window.innerWidth / 2,
+                            clientY: window.innerHeight / 2
+                        });
+                        document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)?.dispatchEvent(clickEvent);
+                    } catch (e) {}
                 }, 2000);
-            `);
+            `).catch(() => { /* Ignore execution errors if frame is destroyed */ });
         }
     });
 
