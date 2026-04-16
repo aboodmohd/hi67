@@ -18,6 +18,157 @@ let extractionWindow;
 // Standard Chrome User-Agent to bypass basic bot checks
 const SPOOFED_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+// Aggressive Ad & Tracker Blocklist
+const AD_DOMAINS = [
+    '*://*.doubleclick.net/*',
+    '*://partner.googleadservices.com/*',
+    '*://*.googlesyndication.com/*',
+    '*://*.google-analytics.com/*',
+    '*://creative.ak.fbcdn.net/*',
+    '*://*.adbrite.com/*',
+    '*://*.exponential.com/*',
+    '*://*.quantserve.com/*',
+    '*://*.scorecardresearch.com/*',
+    '*://*.zedo.com/*',
+    '*://*.adsafeprotected.com/*',
+    '*://*.teads.tv/*',
+    '*://*.outbrain.com/*',
+    '*://*.taboola.com/*',
+    '*://*.popads.net/*',
+    '*://*.popcash.net/*',
+    '*://*.propellerads.com/*',
+    '*://*.onclickads.net/*',
+    '*://*.exoclick.com/*',
+    '*://*.adsterra.com/*',
+    '*://*.juicyads.com/*',
+    '*://*.ero-advertising.com/*',
+    '*://*.trafficjunky.net/*',
+    '*://*.trafficfactory.biz/*',
+    '*://*.adcash.com/*',
+    '*://*.realsrv.com/*',
+    '*://*.adxadserv.com/*',
+    '*://*.cpmstar.com/*',
+    '*://*.ad-maven.com/*',
+    '*://*.hilltopads.com/*',
+    '*://*.clickadu.com/*',
+    '*://*.ad-center.com/*',
+    '*://*.runative-syndicate.com/*',
+    '*://*.betrad.com/*',
+    '*://*.bidgear.com/*',
+    '*://*.adform.net/*',
+    '*://*.rubiconproject.com/*',
+    '*://*.casalemedia.com/*',
+    '*://*.pubmatic.com/*',
+    '*://*.criteo.com/*',
+    '*://*.smartadserver.com/*',
+    '*://*.openx.net/*',
+    '*://*.spotxchange.com/*',
+    '*://*.contextweb.com/*',
+    '*://*.adnxs.com/*',
+    '*://*.rlcdn.com/*',
+    '*://*.yieldmanager.com/*',
+    '*://*.advertising.com/*',
+    '*://*.adtechus.com/*',
+    '*://*.tremormedia.com/*',
+    '*://*.specificclick.net/*',
+    '*://*.fastclick.net/*',
+    '*://*.atdmt.com/*',
+    '*://*.tribalfusion.com/*',
+    '*://*.ru4.com/*',
+    '*://*.media6degrees.com/*',
+    '*://*.bluekai.com/*',
+    '*://*.invitemedia.com/*',
+    '*://*.turn.com/*',
+    '*://*.adroll.com/*',
+    '*://*.mathtag.com/*',
+    '*://*.demdex.net/*',
+    '*://*.xaxis.com/*',
+    '*://*.krxd.net/*',
+    '*://*.agkn.com/*',
+    '*://*.nexac.com/*',
+    '*://*.tapad.com/*',
+    '*://*.w55c.net/*',
+    '*://*.mookie1.com/*',
+    '*://*.tidaltv.com/*',
+    '*://*.vindicosuite.com/*',
+    '*://*.adap.tv/*',
+    '*://*.innovid.com/*',
+    '*://*.liverail.com/*',
+    '*://*.tubemogul.com/*',
+    '*://*.yuilop.com/*',
+    '*://*.adxxx.com/*',
+    '*://*.adultadworld.com/*',
+    '*://*.plugrush.com/*',
+    '*://*.adxpansion.com/*',
+    '*://*.admaster.com.cn/*',
+    '*://*.allyes.com/*',
+    '*://*.miaozhen.com/*',
+    '*://*.adbug.cn/*',
+    '*://*.talkingdata.com/*',
+    '*://*.nielsen.com/*',
+    '*://*.comscore.com/*',
+    '*://*.gemius.com/*',
+    '*://*.hitwise.com/*',
+    '*://*.alexa.com/*',
+    '*://*.chartbeat.com/*',
+    '*://*.compete.com/*',
+    '*://*.omniture.com/*',
+    '*://*.webtrends.com/*',
+    '*://*.coremetrics.com/*',
+    '*://*.kissmetrics.com/*',
+    '*://*.mixpanel.com/*',
+    '*://*.optimizely.com/*',
+    '*://*.localytics.com/*',
+    '*://*.segment.com/*',
+    '*://*.heap.io/*',
+    '*://*.amplitude.com/*',
+    '*://*.snowplowanalytics.com/*',
+    '*://*.piwik.com/*',
+    '*://*.keen.io/*',
+    '*://*.hotjar.com/*',
+    '*://*.crazyegg.com/*',
+    '*://*.mouseflow.com/*',
+    '*://*.inspectlet.com/*',
+    '*://*.clicktale.com/*',
+    '*://*.fullstory.com/*',
+    '*://*.luckyorange.com/*',
+    '*://*.vwo.com/*',
+    '*://*.monetate.com/*',
+    '*://*.abtasty.com/*',
+    '*://*.qubit.com/*',
+    '*://*.apptimize.com/*',
+    '*://*.dynamicyield.com/*',
+    '*://*.kameleoon.com/*',
+    '*://*.convert.com/*',
+    '*://*.maxymiser.com/*',
+    '*://*.certona.com/*',
+    '*://*.richrelevance.com/*',
+    '*://*.barilliance.com/*',
+    '*://*.strands.com/*',
+    '*://*.nosto.com/*',
+    '*://*.peerius.com/*',
+    '*://*.bazaarvoice.com/*',
+    '*://*.yotpo.com/*',
+    '*://*.turnTo.com/*',
+    '*://*.powerreviews.com/*',
+    '*://*.trustpilot.com/*',
+    '*://*.reevoo.com/*',
+    '*://*.feefo.com/*',
+    '*://*.ekomi.com/*',
+    '*://*.reviews.co.uk/*',
+    '*://*.shopperapproved.com/*',
+    '*://*.verified-reviews.com/*',
+    '*://*.bizrate.com/*',
+    '*://*.resellerratings.com/*',
+    '*://*.trustradius.com/*',
+    '*://*.sitejabber.com/*',
+    '*://*.g2crowd.com/*',
+    '*://*.capterra.com/*',
+    '*://*.itcentralstation.com/*',
+    '*://*.trustarc.com/*',
+    '*://*.gartner.com/*'
+];
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 900,
@@ -54,16 +205,33 @@ app.whenReady().then(() => {
 
     createWindow();
 
-    // Hook into the network stack to sniff out m3u8 and mp4 streams
+    // Hook into the network stack to sniff out m3u8 and mp4 streams AND block ads
     session.defaultSession.webRequest.onBeforeRequest({
-        urls: ['*://*/*.m3u8*', '*://*/*.mp4*']
+        urls: ['<all_urls>'] // Listen to everything to block ads and sniff streams
     }, (details, callback) => {
+        
+        // 1. Check against the AdBlocker list
+        const isAd = AD_DOMAINS.some(domain => {
+            // Convert wildcard domain to regex
+            const regexStr = '^' + domain.replace(/\*/g, '.*').replace(/\./g, '\\.') + '$';
+            const regex = new RegExp(regexStr, 'i');
+            return regex.test(details.url);
+        });
+
+        if (isAd) {
+            // Drop the connection immediately
+            return callback({ cancel: true });
+        }
+
+        // 2. Sniff for video streams
         if (details.url.includes('.m3u8') || details.url.includes('.mp4')) {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 // Pipe the intercepted URL back to the renderer
                 mainWindow.webContents.send('stream-intercepted', details.url);
             }
         }
+        
+        // Let legitimate requests pass
         callback({ cancel: false });
     });
 });
