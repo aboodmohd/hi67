@@ -1,0 +1,16 @@
+{
+  "name": "video-extractor",
+  "version": "1.0.0",
+  "description": "Electron app for extracting video streams from embeds",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
