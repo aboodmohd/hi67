@@ -24,7 +24,12 @@ function createWindow() {
             contextIsolation: false
         }
     });
+    
     mainWindow.loadFile('index.html');
+
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+    });
 }
 
 app.whenReady().then(() => {
@@ -35,7 +40,7 @@ app.whenReady().then(() => {
         urls: ['*://*/*.m3u8*', '*://*/*.mp4*']
     }, (details, callback) => {
         if (details.url.includes('.m3u8') || details.url.includes('.mp4')) {
-            if (mainWindow) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
                 // Pipe the intercepted URL back to the renderer
                 mainWindow.webContents.send('stream-intercepted', details.url);
             }
@@ -45,7 +50,8 @@ app.whenReady().then(() => {
 });
 
 ipcMain.on('launch-extractor', (event, targetUrl) => {
-    if (extractionWindow) {
+    // Check if window exists and isn't already destroyed before closing
+    if (extractionWindow && !extractionWindow.isDestroyed()) {
         extractionWindow.close();
     }
     
@@ -59,30 +65,36 @@ ipcMain.on('launch-extractor', (event, targetUrl) => {
             plugins: true
         }
     });
+
+    extractionWindow.on('closed', () => {
+        extractionWindow = null;
+    });
     
     // Inject a payload to attempt auto-play if the embed requires interaction
     extractionWindow.webContents.on('dom-ready', () => {
-        extractionWindow.webContents.executeJavaScript(`
-            setTimeout(() => {
-                const videos = document.querySelectorAll('video');
-                const iframes = document.querySelectorAll('iframe');
-                
-                videos.forEach(v => {
-                    v.muted = true;
-                    v.play().catch(e => console.log('Autoplay blocked:', e));
-                });
-                
-                // Click the center of the screen to bypass click-to-play overlays
-                const clickEvent = new MouseEvent('click', {
-                    view: window,
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: window.innerWidth / 2,
-                    clientY: window.innerHeight / 2
-                });
-                document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)?.dispatchEvent(clickEvent);
-            }, 2000);
-        `);
+        if (extractionWindow && !extractionWindow.isDestroyed()) {
+            extractionWindow.webContents.executeJavaScript(`
+                setTimeout(() => {
+                    const videos = document.querySelectorAll('video');
+                    const iframes = document.querySelectorAll('iframe');
+                    
+                    videos.forEach(v => {
+                        v.muted = true;
+                        v.play().catch(e => console.log('Autoplay blocked:', e));
+                    });
+                    
+                    // Click the center of the screen to bypass click-to-play overlays
+                    const clickEvent = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: window.innerWidth / 2,
+                        clientY: window.innerHeight / 2
+                    });
+                    document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)?.dispatchEvent(clickEvent);
+                }, 2000);
+            `);
+        }
     });
 
     extractionWindow.loadURL(targetUrl);
