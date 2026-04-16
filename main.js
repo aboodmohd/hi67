@@ -14,6 +14,7 @@ server.listen(3000, () => console.log('Express backend running on port 3000'));
 
 let mainWindow;
 let extractionWindow;
+let currentTargetUrl = ''; // Keep track of the target URL to use as referer
 
 // Standard Chrome User-Agent to bypass basic bot checks
 const SPOOFED_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -175,7 +176,8 @@ function createWindow() {
         height: 700,
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false,
+            webSecurity: false // Disable webSecurity in main window to allow playing CORS restricted streams
         }
     });
     
@@ -191,16 +193,41 @@ app.whenReady().then(() => {
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
         details.requestHeaders['User-Agent'] = SPOOFED_UA;
         details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
-        details.requestHeaders['Sec-Fetch-Dest'] = 'document';
-        details.requestHeaders['Sec-Fetch-Mode'] = 'navigate';
-        details.requestHeaders['Sec-Fetch-Site'] = 'none';
-        details.requestHeaders['Sec-Fetch-User'] = '?1';
-        details.requestHeaders['Upgrade-Insecure-Requests'] = '1';
+        
+        // If this request is for a video stream (from the main window player), spoof Referer and Origin
+        if (details.url.includes('.m3u8') || details.url.includes('.mp4') || details.url.includes('.ts')) {
+            if (currentTargetUrl) {
+                try {
+                    const targetOrigin = new URL(currentTargetUrl).origin;
+                    details.requestHeaders['Referer'] = currentTargetUrl;
+                    details.requestHeaders['Origin'] = targetOrigin;
+                } catch (e) {}
+            }
+        } else {
+            details.requestHeaders['Sec-Fetch-Dest'] = 'document';
+            details.requestHeaders['Sec-Fetch-Mode'] = 'navigate';
+            details.requestHeaders['Sec-Fetch-Site'] = 'none';
+            details.requestHeaders['Sec-Fetch-User'] = '?1';
+            details.requestHeaders['Upgrade-Insecure-Requests'] = '1';
+        }
         
         // Strip out Electron/Node specific headers if they sneak in
         delete details.requestHeaders['sec-ch-ua'];
         
         callback({ cancel: false, requestHeaders: details.requestHeaders });
+    });
+
+    // Strip CORS headers from responses to allow the video player to access the streams
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        const responseHeaders = Object.assign({}, details.responseHeaders);
+        
+        if (details.url.includes('.m3u8') || details.url.includes('.mp4') || details.url.includes('.ts')) {
+            responseHeaders['Access-Control-Allow-Origin'] = ['*'];
+            responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS'];
+            responseHeaders['Access-Control-Allow-Headers'] = ['*'];
+        }
+
+        callback({ cancel: false, responseHeaders: responseHeaders });
     });
 
     createWindow();
@@ -223,11 +250,13 @@ app.whenReady().then(() => {
             return callback({ cancel: true });
         }
 
-        // 2. Sniff for video streams
-        if (details.url.includes('.m3u8') || details.url.includes('.mp4')) {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                // Pipe the intercepted URL back to the renderer
-                mainWindow.webContents.send('stream-intercepted', details.url);
+        // 2. Sniff for video streams (only intercept if it's from the extraction window, not the main window player)
+        if (extractionWindow && !extractionWindow.isDestroyed() && details.webContentsId === extractionWindow.webContents.id) {
+            if (details.url.includes('.m3u8') || details.url.includes('.mp4')) {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    // Pipe the intercepted URL back to the renderer
+                    mainWindow.webContents.send('stream-intercepted', details.url);
+                }
             }
         }
         
@@ -237,6 +266,8 @@ app.whenReady().then(() => {
 });
 
 ipcMain.on('launch-extractor', (event, targetUrl) => {
+    currentTargetUrl = targetUrl; // Save the target URL for referer spoofing
+    
     if (extractionWindow && !extractionWindow.isDestroyed()) {
         extractionWindow.close();
     }
